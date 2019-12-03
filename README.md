@@ -10,4 +10,15 @@
     - Local drive
     
     
-개발 로그
+- 개발 로그 <https://github.com/holograming/BongSecurity/wiki>  
+
+### Funtion TodoList  
+- [o] GoogleDriveApi Enable   
+- [o] GoogleDrive + .Net   
+- [o] GoogleDrive api search/upload/create folder  
+- [o] Local file copy/move
+- [o] Compress file  
+- [o] Progress with asynchrous  
+- [o] add rclick context
+
+
