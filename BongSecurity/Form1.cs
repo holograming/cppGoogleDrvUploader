@@ -36,23 +36,34 @@ namespace BongSecurity
 
         private void button1_Click(object sender, EventArgs e)
         {
-           // timer.Start();
+            // timer.Start();
+            var forderId = GoogleDriveApi.CreateFolder("HelloWorld1");
 
-            var _source = new FileInfo("c:\\1_Image0.bmp");
-            var _destination = new FileInfo("d:\\1_Image01.bmp");
-            //Check if the file exists, we will delete it
-            if (_destination.Exists)
-                _destination.Delete();
-            
-            //Create a tast to run copy file
-            Task.Run(() =>
+            DirectoryInfo d = new DirectoryInfo(@"c:\\a1");//Assuming Test is your Folder
+            FileInfo[] Files = d.GetFiles("*.*"); //Getting Text files
+            foreach (FileInfo file in Files)
             {
-                _source.CopyTo(_destination, x => progressBar1.BeginInvoke(new Action(() => { progressBar1.Value = x; label1.Text = x.ToString() + "%"; })));
-            }).GetAwaiter().OnCompleted(() => progressBar1.BeginInvoke(new Action(() => 
+                GoogleDriveApi.FileUploadInFolder(forderId, file.ToString());
+            }
+
+            if(false)
             {
-                progressBar1.Value = 100; label1.Text = "100%";
-                //MessageBox.Show("You have successfully copied the file !", "Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            })));
+                var _source = new FileInfo("c:\\1_Image0.bmp");
+                var _destination = new FileInfo("d:\\1_Image01.bmp");
+                //Check if the file exists, we will delete it
+                if (_destination.Exists)
+                    _destination.Delete();
+
+                //Create a tast to run copy file
+                Task.Run(() =>
+                {
+                    _source.CopyTo(_destination, x => progressBar1.BeginInvoke(new Action(() => { progressBar1.Value = x; label1.Text = x.ToString() + "%"; })));
+                }).GetAwaiter().OnCompleted(() => progressBar1.BeginInvoke(new Action(() =>
+                {
+                    progressBar1.Value = 100; label1.Text = "100%";
+                            //MessageBox.Show("You have successfully copied the file !", "Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        })));
+            }
 
         }
 
