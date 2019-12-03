@@ -43,7 +43,7 @@ namespace BongSecurity
             FileInfo[] Files = d.GetFiles("*.*"); //Getting Text files
             foreach (FileInfo file in Files)
             {
-                GoogleDriveApi.FileUploadInFolder(forderId, file.ToString());
+                GoogleDriveApi.FileUploadInFolder(forderId, file.ToString(), progressBar2);
             }
 
             if(false)
