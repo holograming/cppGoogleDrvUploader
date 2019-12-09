@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO.Compression;
+using System.Windows.Forms;
+
 
 namespace BongSecurity
 {
@@ -35,6 +37,89 @@ namespace BongSecurity
                 }
                 writer?.Wait();
             }
+        }
+
+        static public void CopyFolder(string sourceFolder, string destFolder)
+        {
+            if (isDirectory(sourceFolder))
+            {
+                if (!Directory.Exists(destFolder))
+                    Directory.CreateDirectory(destFolder);
+                string[] files = Directory.GetFiles(sourceFolder);
+                foreach (string file in files)
+                {
+                    string name = Path.GetFileName(file);
+                    string dest = Path.Combine(destFolder, name);
+                    File.Copy(file, dest);
+                }
+                string[] folders = Directory.GetDirectories(sourceFolder);
+                foreach (string folder in folders)
+                {
+                    string name = Path.GetFileName(folder);
+                    string dest = Path.Combine(destFolder, name);
+                    CopyFolder(folder, dest);
+                }
+            }
+            else
+            {
+                File.Copy(sourceFolder, destFolder);
+            }
+        }
+
+        static public void DeleteFolder(string source)
+        {
+            if(isDirectory(source))
+            {
+                if (Directory.Exists(source))
+                {
+                    Directory.Delete(source, true);
+                }
+            }
+            else
+            {
+                File.Delete(source);
+            }
+        }
+
+
+        public static bool Compression(string src, string dest)
+        {
+            Program.AddLog("Compression : " + src + ", " + dest + "/");
+
+            if (System.IO.File.Exists(dest))
+            {
+                MessageBox.Show("동일한 파일이 존재합니다.!");
+                return false;
+            }
+
+            /// 자기 자신 패스에는 안됨.
+            try
+            {
+                ZipFile.CreateFromDirectory(src, dest, CompressionLevel.Fastest, true, Encoding.UTF8);
+                Program.AddLog("Compression success.");
+            }
+            catch (IOException e)
+            {
+                Program.AddLog("[ " + e.GetType().Name + " ]" + "File compression error.");
+                return false;
+            }
+            return true;
+        }
+
+        public static bool isValidInput(string src)
+        {
+            var file = new FileInfo(src);
+            return file.Exists;
+        }
+
+        public static bool isDirectory(string src)
+        {
+            System.IO.FileAttributes fa = System.IO.File.GetAttributes(src);
+
+            if ((fa & FileAttributes.Directory) == FileAttributes.Directory)
+                return true;
+
+            return false;
         }
     }
 

@@ -8,66 +8,230 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Net;
 
 namespace BongSecurity
 {
     public partial class MainFrame : Form
     {
-        public MainFrame()
+        private string m_selectedFile = "";
+        private int m_gdTotCount = 0;
+        private int m_completeCount = 0;
+        public MainFrame(string[] args)
         {
-            InitializeComponent();
+             InitializeComponent();
 
-            
+            if (args.Length == 0 || String.IsNullOrEmpty(args[0]) || !FileInfoExtension.isValidInput(args[0]))
+            {
+                MessageBox.Show("선택한 파일이 없으므로 프로그램을 종료합니다.");
+                Program.AddLog("파일 또는 폴더 입력이 없습니다.");
+                return;
+            }
+
+            m_selectedFile = args[0];
+
+            if (!Convert.ToBoolean(AppConfiguration.GetAppConfig("DevMode")))
+            {
+                sourceFolderDeleteAfterCopy.Checked = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
+                googleDriveTextBox.Text = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
+                localFolderTextBox.Text = AppConfiguration.GetAppConfig("LocalPath");
+
+                connectEvent();
+
+                if (String.IsNullOrEmpty(localFolderTextBox.Text) || String.IsNullOrEmpty(googleDriveTextBox.Text))
+                {
+                    return;
+                }
+
+                run();
+            }
+            else
+            {
+                Program.AddLog("==================================================");
+                Program.AddLog("==================   DevMode   ===================");
+                Program.AddLog("==================================================");
+                connectEvent();
+            }
+
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            progressBar1.Style = ProgressBarStyle.Continuous;
-            progressBar1.Minimum = 0;
-            progressBar1.Maximum = 100;
-            progressBar1.Value = 0;
+            progressbar.Style = ProgressBarStyle.Continuous;
+            progressbar.Minimum = 0;
+            progressbar.Maximum = 100;
+            progressbar.Value = 0;
 
-            // 최대,최소,간격을 임의로 조정
-            progressBar2.Style = ProgressBarStyle.Continuous;
-            progressBar2.Minimum = 0;
-            progressBar2.Maximum = 100;
-            progressBar2.Value = 0;
+            sourceFolderDeleteAfterCopyToolTip.SetToolTip(sourceFolderDeleteAfterCopy, "원본파일 삭제");
+        }
+
+        public void updateGoogleUploadProgressBar(long value, string text)
+        {
+            progressbar.BeginInvoke(new Action(() =>
+            {
+                ++m_completeCount;
+                progressbar.Value = m_completeCount * 100/ m_gdTotCount;
+                gdTarget.Text = "(" + m_completeCount + "/" + m_gdTotCount + ")";
+            }));
+        }
+
+        private void loadSavePath()
+        {
+            var folderDlg = new FolderBrowserDialog();
+            folderDlg.ShowNewFolderButton = true;
+            DialogResult result = folderDlg.ShowDialog();
+            if (result != DialogResult.OK)
+            {
+                return;
+            }
+            var path = new DirectoryInfo(folderDlg.SelectedPath);
+            if(!path.Exists)
+            {
+                path.Create();
+            }
+            localFolderTextBox.Text = folderDlg.SelectedPath;
+            AppConfiguration.SetAppConfig("LocalPath", folderDlg.SelectedPath);
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            loadSavePath();
+        }
+
+        private void sourceDeleteChanged(object sender, EventArgs e)
+        {
+            var t = Convert.ToString(sourceFolderDeleteAfterCopy.Checked);
+            AppConfiguration.SetAppConfig("SourceDelete", t);
+        }
+
+        private void readyToStartBackup(object sender, EventArgs e)
+        {
+            if(sender == googleDriveTextBox)
+            {
+                AppConfiguration.SetAppConfig("NameOnGoogleDrive", googleDriveTextBox.Text);
+            }
+            if(String.IsNullOrEmpty(googleDriveTextBox.Text) || 
+               String.IsNullOrEmpty(localFolderTextBox.Text) ||
+               !FileInfoExtension.isDirectory(localFolderTextBox.Text))
+            {
+                startBackupBtn.Enabled = false;
+            }
+            else
+            {
+                startBackupBtn.Enabled = true;
+            }
+        }
+        
+
+        private void run()
+        {
+            var isSourceDelete = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
+            var nameOnGoogleDrive = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
+            var destPath = AppConfiguration.GetAppConfig("LocalPath");
+
+            if (String.IsNullOrEmpty(destPath) || String.IsNullOrEmpty(nameOnGoogleDrive))
+            {
+                MessageBox.Show("프로그램 설정이 올바르지 않습니다.");
+                startBackupBtn.Enabled = false;
+                return;
+            }
+
+            /// 파일 링크 주소
+            string dirName ;
+            var info = new FileInfo(m_selectedFile);
+            if (!FileInfoExtension.isDirectory(m_selectedFile))
+            {
+                dirName = Path.GetFileNameWithoutExtension(m_selectedFile);
+                Program.AddLog("Input file source : " + dirName);
+            }
+            else
+            {
+                dirName = new DirectoryInfo(m_selectedFile).Name;
+            }
+            
+            var target = destPath + "\\" + DateTime.Now.ToString("[yyyy_MM_dd_ss]_") + dirName;
+            Program.AddLog("Start copy to " + target);
+            
+            //Create a tast to run copy file
+            Task.Run(() =>
+            {
+                // To move an entire directory. To programmatically modify or combine
+                // path strings, use the System.IO.Path class.
+
+                /// 파일이면 
+                /// 폴더 만들고
+                /// /// 해당 폴더에 일느 동일하게 복사하기
+                FileInfoExtension.CopyFolder(m_selectedFile, target);
+            }).GetAwaiter().OnCompleted(() => progressbar.BeginInvoke(new Action(() =>
+            {
+                /// 인터넷 체크
+                Program.AddLog("Internet connection check.. ");
+                if (!CheckForInternetConnection())
+                {
+                    Program.AddLog("Failed.");
+                    System.Environment.Exit(0);
+                    return;
+                }
+
+                /// root id 가져오기
+                var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
+                if(String.IsNullOrEmpty(id))
+                {
+                    Program.AddLog("Compression success.. ");
+                    id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
+                }
+
+                Program.AddLog("Start google drive upload.. " + id);
+
+                //Google upload
+                if (FileInfoExtension.isDirectory(m_selectedFile))
+                {
+                    // 압축
+                    if (!FileInfoExtension.Compression(m_selectedFile, target + ".zip"))
+                    {
+                        return;
+                    }
+                }
+
+                Program.AddLog("Compression success.. ");
+
+                if (GoogleDriveApi.FileUploadInFolder(id, target + ".zip"))
+                {
+                    Program.AddLog("Upload success.");
+                    ///
+                    if(isSourceDelete)
+                    {
+                        FileInfoExtension.DeleteFolder(target + ".zip");
+                        FileInfoExtension.DeleteFolder(m_selectedFile);
+                    }
+
+                    
+                    /// 원본 삭제
+                    System.Environment.Exit(0);
+                }
+                
+                //MessageBox.Show("You have successfully copied the file !", "Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            })));
+        }
+
+
+        public static bool CheckForInternetConnection()
+        {
+            try
+            {
+                using (var client = new WebClient())
+                using (client.OpenRead("http://google.com/generate_204"))
+                    return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            // timer.Start();
-            var forderId = GoogleDriveApi.CreateFolder("HelloWorld1");
-
-            DirectoryInfo d = new DirectoryInfo(@"c:\\a1");//Assuming Test is your Folder
-            FileInfo[] Files = d.GetFiles("*.*"); //Getting Text files
-            foreach (FileInfo file in Files)
-            {
-                GoogleDriveApi.FileUploadInFolder(forderId, file.ToString(), progressBar2);
-            }
-
-            if(false)
-            {
-                var _source = new FileInfo("c:\\1_Image0.bmp");
-                var _destination = new FileInfo("d:\\1_Image01.bmp");
-                //Check if the file exists, we will delete it
-                if (_destination.Exists)
-                    _destination.Delete();
-
-                //Create a tast to run copy file
-                Task.Run(() =>
-                {
-                    _source.CopyTo(_destination, x => progressBar1.BeginInvoke(new Action(() => { progressBar1.Value = x; label1.Text = x.ToString() + "%"; })));
-                }).GetAwaiter().OnCompleted(() => progressBar1.BeginInvoke(new Action(() =>
-                {
-                    progressBar1.Value = 100; label1.Text = "100%";
-                            //MessageBox.Show("You have successfully copied the file !", "Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        })));
-            }
-
+            run();
         }
-
     }
-
-    
 }

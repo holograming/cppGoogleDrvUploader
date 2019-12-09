@@ -30,7 +30,6 @@ namespace BongSecurity
 
     class GoogleDriveApi
     {
-
         public static string[] Scopes = { Google.Apis.Drive.v3.DriveService.Scope.Drive };
         public static Google.Apis.Drive.v3.DriveService GetService_v3()
         {
@@ -75,53 +74,47 @@ namespace BongSecurity
             //Console.WriteLine("Folder ID: " + file.Id);
         }
 
-        public static void FileUploadInFolder(string folderId, string localfilepath, System.Windows.Forms.ProgressBar prog)
+        public static bool FileUploadInFolder(string folderId, string localfilepath)
         {
             System.IO.FileAttributes fa = System.IO.File.GetAttributes(localfilepath);
 
             if ((fa & FileAttributes.Directory) == FileAttributes.Directory)
-                return;
+                return false;
 
             var ext = Path.GetExtension(localfilepath);
 
             if (string.IsNullOrEmpty(ext))
-                return;
+                return false;
 
-
-            var service = GetService_v3();
-            var fileMetadata = new Google.Apis.Drive.v3.Data.File()
+            try
             {
-                Name = Path.GetFileName(localfilepath),
-                Parents = new List<string>
+                var service = GetService_v3();
+                var fileMetadata = new Google.Apis.Drive.v3.Data.File()
                 {
-                    folderId
+                    Name = Path.GetFileName(localfilepath),
+                    Parents = new List<string>
+                    {
+                        folderId
+                    }
+                };
+
+                var mimeType = MimeTypes.MimeTypeMap.GetMimeType(ext);
+                FilesResource.CreateMediaUpload request;
+                using (var stream = new System.IO.FileStream(localfilepath,
+                                        System.IO.FileMode.Open))
+                {
+                    request = service.Files.Create(fileMetadata, stream, mimeType);
+                    request.Fields = "id";
+                    request.Upload();
+                    return true;
                 }
-            };
-
-            var mimeType = MimeTypes.MimeTypeMap.GetMimeType(ext);
-            FilesResource.CreateMediaUpload request;
-            using (var stream = new System.IO.FileStream(localfilepath,
-                                    System.IO.FileMode.Open))
-            {
-                request = service.Files.Create(
-                    fileMetadata, stream, mimeType);
-                request.Fields = "id";
-                //request.Upload();
-
-                var task = request.UploadAsync();
-                task.ContinueWith(t =>
-                {
-                    // Remeber to clean the stream.
-                    stream.Dispose();
-                });
-
-                request.ProgressChanged += Upload_ProgressChanged;
-                request.ResponseReceived += Upload_ResponseReceived;
-
+                //var file = request.ResponseBody;
             }
-            var file = request.ResponseBody;
-
-
+            catch (Exception exc)
+            {
+                System.Diagnostics.Debug.WriteLine(exc.Message + " Upload file to Drive Error");
+                return false;
+            }
         }
 
 
@@ -167,6 +160,41 @@ namespace BongSecurity
                 }
             }
             return FileList;
+        }
+
+        public static string getBackupFolderId(string FolderName)
+        {
+            Google.Apis.Drive.v3.DriveService service = GetService_v3();
+
+            // Define parameters of request.
+            Google.Apis.Drive.v3.FilesResource.ListRequest FileListRequest = service.Files.List();
+            FileListRequest.Fields = "nextPageToken, files(createdTime, id, name, size, version, trashed, parents)";
+
+            // List files.
+            IList<Google.Apis.Drive.v3.Data.File> files = FileListRequest.Execute().Files;
+            List<GoogleDriveFiles> FileList = new List<GoogleDriveFiles>();
+
+            if (files != null && files.Count > 0)
+            {
+                foreach (var file in files)
+                {
+                    GoogleDriveFiles File = new GoogleDriveFiles
+                    {
+                        Id = file.Id,
+                        Name = file.Name,
+                        Size = file.Size,
+                        Version = file.Version,
+                        CreatedTime = file.CreatedTime,
+                        Parents = file.Parents
+                    };
+
+                    if(file.Name.Equals(FolderName))
+                    {
+                        return file.Id;
+                    }
+                }
+            }
+            return string.Empty;
         }
     }
 
