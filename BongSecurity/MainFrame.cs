@@ -25,6 +25,7 @@ namespace BongSecurity
             {
                 MessageBox.Show("선택한 파일이 없으므로 프로그램을 종료합니다.");
                 Program.AddLog("파일 또는 폴더 입력이 없습니다.");
+                System.Environment.Exit(0);
                 return;
             }
 
@@ -35,10 +36,13 @@ namespace BongSecurity
                 sourceFolderDeleteAfterCopy.Checked = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
                 googleDriveTextBox.Text = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
                 localFolderTextBox.Text = AppConfiguration.GetAppConfig("LocalPath");
-
+                credentialTextBox.Text = AppConfiguration.GetAppConfig("CredentialPath");
                 connectEvent();
 
-                if (String.IsNullOrEmpty(localFolderTextBox.Text) || String.IsNullOrEmpty(googleDriveTextBox.Text))
+                if (String.IsNullOrEmpty(localFolderTextBox.Text) || 
+                    String.IsNullOrEmpty(googleDriveTextBox.Text) ||
+                    String.IsNullOrEmpty(credentialTextBox.Text) || 
+                    !new FileInfo(credentialTextBox.Text).Exists)
                 {
                     return;
                 }
@@ -60,7 +64,7 @@ namespace BongSecurity
             progressbar.Style = ProgressBarStyle.Continuous;
             progressbar.Minimum = 0;
             progressbar.Maximum = 100;
-            progressbar.Value = 0;
+            progressbar.MarqueeAnimationSpeed = 0;
 
             sourceFolderDeleteAfterCopyToolTip.SetToolTip(sourceFolderDeleteAfterCopy, "원본파일 삭제");
         }
@@ -112,6 +116,7 @@ namespace BongSecurity
             }
             if(String.IsNullOrEmpty(googleDriveTextBox.Text) || 
                String.IsNullOrEmpty(localFolderTextBox.Text) ||
+               String.IsNullOrEmpty(credentialTextBox.Text) ||
                !FileInfoExtension.isDirectory(localFolderTextBox.Text))
             {
                 startBackupBtn.Enabled = false;
@@ -128,8 +133,12 @@ namespace BongSecurity
             var isSourceDelete = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
             var nameOnGoogleDrive = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
             var destPath = AppConfiguration.GetAppConfig("LocalPath");
+            var credentialPath = AppConfiguration.GetAppConfig("CredentialPath");
 
-            if (String.IsNullOrEmpty(destPath) || String.IsNullOrEmpty(nameOnGoogleDrive))
+            if (String.IsNullOrEmpty(destPath) ||
+                   String.IsNullOrEmpty(nameOnGoogleDrive) ||
+                   String.IsNullOrEmpty(credentialPath) ||
+                   !new FileInfo(credentialPath).Exists)
             {
                 MessageBox.Show("프로그램 설정이 올바르지 않습니다.");
                 startBackupBtn.Enabled = false;
@@ -151,7 +160,10 @@ namespace BongSecurity
             
             var target = destPath + "\\" + DateTime.Now.ToString("[yyyy_MM_dd_ss]_") + dirName;
             Program.AddLog("Start copy to " + target);
-            
+
+            progressbar.Style = ProgressBarStyle.Marquee;
+            progressbar.MarqueeAnimationSpeed = 30;
+
             //Create a tast to run copy file
             Task.Run(() =>
             {
@@ -162,8 +174,54 @@ namespace BongSecurity
                 /// 폴더 만들고
                 /// /// 해당 폴더에 일느 동일하게 복사하기
                 FileInfoExtension.CopyFolder(m_selectedFile, target);
-            }).GetAwaiter().OnCompleted(() => progressbar.BeginInvoke(new Action(() =>
-            {
+
+                /// 인터넷 체크
+                Program.AddLog("Internet connection check.. ");
+                if (!CheckForInternetConnection())
+                {
+                    Program.AddLog("Failed.");
+                    System.Environment.Exit(0);
+                    return;
+                }
+
+                /// root id 가져오기
+                var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
+                if (String.IsNullOrEmpty(id))
+                {
+
+                    id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
+                }
+
+                Program.AddLog("Start google drive upload.. " + id);
+
+                //Google upload
+                if (FileInfoExtension.isDirectory(m_selectedFile))
+                {
+                    // 압축
+                    if (!FileInfoExtension.Compression(m_selectedFile, target + ".zip"))
+                    {
+                        return;
+                    }
+                }
+
+                Program.AddLog("Compression success.. ");
+
+                if (GoogleDriveApi.FileUploadInFolder(id, target + ".zip"))
+                {
+                    Program.AddLog("Upload success.");
+                    ///
+                    if (isSourceDelete)
+                    {
+                        FileInfoExtension.DeleteFolder(target + ".zip");
+                        FileInfoExtension.DeleteFolder(m_selectedFile);
+                    }
+
+
+                    /// 원본 삭제
+                    System.Environment.Exit(0);
+                }
+
+            }).GetAwaiter().OnCompleted(() => {
                 /// 인터넷 체크
                 Program.AddLog("Internet connection check.. ");
                 if (!CheckForInternetConnection())
@@ -177,7 +235,7 @@ namespace BongSecurity
                 var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
                 if(String.IsNullOrEmpty(id))
                 {
-                    Program.AddLog("Compression success.. ");
+                    
                     id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
                 }
 
@@ -211,7 +269,7 @@ namespace BongSecurity
                 }
                 
                 //MessageBox.Show("You have successfully copied the file !", "Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            })));
+            });
         }
 
 
@@ -232,6 +290,23 @@ namespace BongSecurity
         private void button1_Click(object sender, EventArgs e)
         {
             run();
+        }
+
+        private void credentialBtn_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = System.Environment.CurrentDirectory;
+                openFileDialog.Filter = "json files (*.json)|*.json";
+                openFileDialog.FilterIndex = 2;
+                //openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    credentialTextBox.Text = openFileDialog.FileName;
+                    AppConfiguration.SetAppConfig("CredentialPath", openFileDialog.FileName);
+                }
+            }
         }
     }
 }

@@ -109,7 +109,7 @@ namespace BongSecurity
         public static bool isValidInput(string src)
         {
             var file = new FileInfo(src);
-            return file.Exists;
+            return (file.Exists || isDirectory(src));
         }
 
         public static bool isDirectory(string src)

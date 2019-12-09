@@ -34,7 +34,8 @@ namespace BongSecurity
         public static Google.Apis.Drive.v3.DriveService GetService_v3()
         {
             UserCredential credential;
-            using (var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+            var auth_filename = AppConfiguration.GetAppConfig("CredentialPath");
+            using (var stream = new FileStream(auth_filename, FileMode.Open, FileAccess.Read))
             {
                 //String FolderPath = @"D:\";
                 //String FilePath = Path.Combine(FolderPath, "DriveServiceCredentials.json");
