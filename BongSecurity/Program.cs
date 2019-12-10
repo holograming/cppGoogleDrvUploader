@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using log4net;
+using System.IO;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 

@@ -45,7 +45,7 @@ namespace BongSecurity
                     Scopes,
                     "user",
                     CancellationToken.None,
-                    new FileDataStore("SuchPropsCredentials.json", true)).Result;
+                    new FileDataStore("Authentication", true)).Result;
             }
 
             //Create Drive API service.

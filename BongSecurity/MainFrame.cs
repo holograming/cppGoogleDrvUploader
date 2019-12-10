@@ -147,8 +147,15 @@ namespace BongSecurity
                 openFileDialog.FilterIndex = 2;
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    credentialTextBox.Text = openFileDialog.FileName;
-                    AppConfiguration.SetAppConfig("CredentialPath", openFileDialog.FileName);
+                    var authPath = Path.GetDirectoryName(Application.ExecutablePath) + "\\Authentication";
+                    if(!System.IO.Directory.Exists(authPath))
+                    {
+                        System.IO.Directory.CreateDirectory(authPath);
+                    }
+
+                    File.Copy(openFileDialog.FileName, authPath + "\\" + Path.GetFileName(openFileDialog.FileName));
+                    credentialTextBox.Text = authPath + "\\" + Path.GetFileName(openFileDialog.FileName);
+                    AppConfiguration.SetAppConfig("CredentialPath", authPath + "\\" + Path.GetFileName(openFileDialog.FileName));
                 }
             }
         }
