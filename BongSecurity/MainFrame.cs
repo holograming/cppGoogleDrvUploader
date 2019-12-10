@@ -26,13 +26,14 @@ namespace BongSecurity
 
             m_selectedFile = args[0];
 
+            sourceFolderDeleteAfterCopy.Checked = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
+            googleDriveTextBox.Text = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
+            localFolderTextBox.Text = AppConfiguration.GetAppConfig("LocalPath");
+            credentialTextBox.Text = AppConfiguration.GetAppConfig("CredentialPath");
+
             if (!Convert.ToBoolean(AppConfiguration.GetAppConfig("DevMode")))
             {
-                sourceFolderDeleteAfterCopy.Checked = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
-                googleDriveTextBox.Text = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
-                localFolderTextBox.Text = AppConfiguration.GetAppConfig("LocalPath");
-                credentialTextBox.Text = AppConfiguration.GetAppConfig("CredentialPath");
-                connectEvent();
+                
 
                 if (String.IsNullOrEmpty(localFolderTextBox.Text) || 
                     String.IsNullOrEmpty(googleDriveTextBox.Text) ||
@@ -41,6 +42,8 @@ namespace BongSecurity
                 {
                     return;
                 }
+                uploadMode();
+                connectEvent();
 
                 backgroundWorker1.RunWorkerAsync();
             }
@@ -50,18 +53,39 @@ namespace BongSecurity
                 Program.AddLog("==================   DevMode   ===================");
                 Program.AddLog("==================================================");
                 connectEvent();
+                devMode();
             }
+        }
 
+        private void devMode()
+        {
+            registryImg.Enabled = true;
+            sourceFolderDeleteAfterCopy.Enabled = true;
+            localFolderBtn.Enabled = true;
+            credentialBtn.Enabled = true;
+            googleDriveTextBox.Enabled = true;
+
+            progressbar.Style = ProgressBarStyle.Continuous;
+            progressbar.MarqueeAnimationSpeed = 0;
+        }
+
+        private void uploadMode()
+        {
+            registryImg.Enabled = false;
+            sourceFolderDeleteAfterCopy.Enabled = false;
+            localFolderBtn.Enabled = false;
+            credentialBtn.Enabled = false;
+            googleDriveTextBox.Enabled = false;
+            startCancelBtn.Enabled = false;
+
+            progressbar.Style = ProgressBarStyle.Marquee;
+            progressbar.MarqueeAnimationSpeed = 30;
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            progressbar.Style = ProgressBarStyle.Continuous;
-            progressbar.Minimum = 0;
-            progressbar.Maximum = 100;
-            progressbar.MarqueeAnimationSpeed = 0;
-
             sourceFolderDeleteAfterCopyToolTip.SetToolTip(sourceFolderDeleteAfterCopy, "원본파일 삭제");
+            registryToolTip.SetToolTip(registryImg, "Registry");
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -110,6 +134,7 @@ namespace BongSecurity
 
         private void button1_Click(object sender, EventArgs e)
         {
+            uploadMode();
             backgroundWorker1.RunWorkerAsync();
         }
 
@@ -260,7 +285,7 @@ namespace BongSecurity
                 {
                     MessageBox.Show("FAILED_UPLOAD");
                 }
-
+                devMode();
                 startCancelBtn.Enabled = true;
             }
         }
@@ -269,13 +294,28 @@ namespace BongSecurity
         private void backgroundWorker1_ProgressChanged(object sender,
             ProgressChangedEventArgs e)
         {
-            if(e.ProgressPercentage == 0)
-            {
-                progressbar.Style = ProgressBarStyle.Marquee;
-                progressbar.MarqueeAnimationSpeed = 30;
-            }
             this.statusLabel.Text = e.UserState.ToString();
         }
 
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+            if (RegistryInfo.findLinkRegistry())
+            {
+                MessageBoxButtons buttons = MessageBoxButtons.YesNo;
+                DialogResult result;
+
+                // Displays the MessageBox.
+                result = MessageBox.Show("Registry를 지우시겠습니까?", "Registry delete", buttons);
+                if (result == System.Windows.Forms.DialogResult.Yes)
+                {
+                    RegistryInfo.deleteLinkRegistry();
+                }
+                else
+                {
+                    return;
+                }
+            }
+            RegistryInfo.addLinkRegistry();
+        }
     }
 }
