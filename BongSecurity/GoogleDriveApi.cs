@@ -6,8 +6,8 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using System.Net;
 
-using System.Windows.Forms;
 /*
 Google drive API class
 
@@ -196,6 +196,20 @@ namespace BongSecurity
                 }
             }
             return string.Empty;
+        }
+
+        public static bool CheckForInternetConnection()
+        {
+            try
+            {
+                using (var client = new System.Net.WebClient())
+                using (client.OpenRead("http://google.com/generate_204"))
+                    return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 

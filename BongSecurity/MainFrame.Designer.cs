@@ -1,4 +1,6 @@
-﻿namespace BongSecurity
+﻿using System.ComponentModel;
+
+namespace BongSecurity
 {
     partial class MainFrame
     {
@@ -6,6 +8,7 @@
         /// Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
+        private System.ComponentModel.BackgroundWorker backgroundWorker1;
 
         /// <summary>
         /// Clean up any resources being used.
@@ -31,7 +34,7 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainFrame));
             this.progressbar = new System.Windows.Forms.ProgressBar();
-            this.gdTarget = new System.Windows.Forms.Label();
+            this.statusLabel = new System.Windows.Forms.Label();
             this.localFolderTextBox = new System.Windows.Forms.TextBox();
             this.localFolderBtn = new System.Windows.Forms.Button();
             this.localFolderLabel = new System.Windows.Forms.Label();
@@ -39,10 +42,11 @@
             this.googleDriveLabel = new System.Windows.Forms.Label();
             this.googleDriveTextBox = new System.Windows.Forms.TextBox();
             this.sourceFolderDeleteAfterCopyToolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.startBackupBtn = new System.Windows.Forms.Button();
+            this.startCancelBtn = new System.Windows.Forms.Button();
             this.credentialLabel = new System.Windows.Forms.Label();
             this.credentialBtn = new System.Windows.Forms.Button();
             this.credentialTextBox = new System.Windows.Forms.TextBox();
+            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.SuspendLayout();
             // 
             // progressbar
@@ -52,15 +56,22 @@
             this.progressbar.Name = "progressbar";
             this.progressbar.Size = new System.Drawing.Size(411, 21);
             this.progressbar.TabIndex = 0;
+
+            // 
+            // backgroundWorker1
+            // 
+            this.backgroundWorker1.WorkerReportsProgress = true;
+            this.backgroundWorker1.WorkerSupportsCancellation = true;
+
             // 
             // gdTarget
             // 
-            this.gdTarget.AutoSize = true;
-            this.gdTarget.Location = new System.Drawing.Point(34, 160);
-            this.gdTarget.Name = "gdTarget";
-            this.gdTarget.Size = new System.Drawing.Size(41, 12);
-            this.gdTarget.TabIndex = 1;
-            this.gdTarget.Text = "Ready";
+            this.statusLabel.AutoSize = true;
+            this.statusLabel.Location = new System.Drawing.Point(34, 160);
+            this.statusLabel.Name = "gdTarget";
+            this.statusLabel.Size = new System.Drawing.Size(41, 12);
+            this.statusLabel.TabIndex = 1;
+            this.statusLabel.Text = "Ready";
             // 
             // localFolderTextBox
             // 
@@ -116,14 +127,14 @@
             // 
             // startBackupBtn
             // 
-            this.startBackupBtn.Enabled = false;
-            this.startBackupBtn.Location = new System.Drawing.Point(184, 224);
-            this.startBackupBtn.Name = "startBackupBtn";
-            this.startBackupBtn.Size = new System.Drawing.Size(117, 28);
-            this.startBackupBtn.TabIndex = 12;
-            this.startBackupBtn.Text = "Start";
-            this.startBackupBtn.UseVisualStyleBackColor = true;
-            this.startBackupBtn.Click += new System.EventHandler(this.button1_Click);
+            this.startCancelBtn.Enabled = false;
+            this.startCancelBtn.Location = new System.Drawing.Point(184, 224);
+            this.startCancelBtn.Name = "startBackupBtn";
+            this.startCancelBtn.Size = new System.Drawing.Size(117, 28);
+            this.startCancelBtn.TabIndex = 12;
+            this.startCancelBtn.Text = "Start";
+            this.startCancelBtn.UseVisualStyleBackColor = true;
+            this.startCancelBtn.Click += new System.EventHandler(this.button1_Click);
             // 
             // credentialLabel
             // 
@@ -160,14 +171,14 @@
             this.Controls.Add(this.credentialLabel);
             this.Controls.Add(this.credentialBtn);
             this.Controls.Add(this.credentialTextBox);
-            this.Controls.Add(this.startBackupBtn);
+            this.Controls.Add(this.startCancelBtn);
             this.Controls.Add(this.googleDriveLabel);
             this.Controls.Add(this.googleDriveTextBox);
             this.Controls.Add(this.sourceFolderDeleteAfterCopy);
             this.Controls.Add(this.localFolderLabel);
             this.Controls.Add(this.localFolderBtn);
             this.Controls.Add(this.localFolderTextBox);
-            this.Controls.Add(this.gdTarget);
+            this.Controls.Add(this.statusLabel);
             this.Controls.Add(this.progressbar);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainFrame";
@@ -176,6 +187,18 @@
             this.ResumeLayout(false);
             this.PerformLayout();
 
+        }
+
+        private void InitializeBackgroundWorker()
+        {
+            backgroundWorker1.DoWork +=
+                new DoWorkEventHandler(backgroundWorker1_DoWork);
+            backgroundWorker1.RunWorkerCompleted +=
+                new RunWorkerCompletedEventHandler(
+            backgroundWorker1_RunWorkerCompleted);
+            backgroundWorker1.ProgressChanged +=
+                new ProgressChangedEventHandler(
+            backgroundWorker1_ProgressChanged);
         }
 
         #endregion
@@ -188,7 +211,7 @@
         }
 
         private System.Windows.Forms.ProgressBar progressbar;
-        private System.Windows.Forms.Label gdTarget;
+        private System.Windows.Forms.Label statusLabel;
         
         private System.Windows.Forms.TextBox localFolderTextBox;
         private System.Windows.Forms.Button localFolderBtn;
@@ -197,7 +220,7 @@
         private System.Windows.Forms.Label googleDriveLabel;
         private System.Windows.Forms.TextBox googleDriveTextBox;
         private System.Windows.Forms.ToolTip sourceFolderDeleteAfterCopyToolTip;
-        private System.Windows.Forms.Button startBackupBtn;
+        private System.Windows.Forms.Button startCancelBtn;
         private System.Windows.Forms.Label credentialLabel;
         private System.Windows.Forms.Button credentialBtn;
         private System.Windows.Forms.TextBox credentialTextBox;

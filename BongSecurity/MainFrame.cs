@@ -1,25 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
-using System.Net;
+using System.ComponentModel;
 
 namespace BongSecurity
 {
     public partial class MainFrame : Form
     {
         private string m_selectedFile = "";
-        private int m_gdTotCount = 0;
-        private int m_completeCount = 0;
+
+        enum Error { SUCCESS, NOT_READY, FAILED_INTERNET_CONNECTION, FAILED_COMPRESSION, FAILED_UPLOAD  };
+
         public MainFrame(string[] args)
         {
-             InitializeComponent();
+            InitializeComponent();
+            InitializeBackgroundWorker();
 
             if (args.Length == 0 || String.IsNullOrEmpty(args[0]) || !FileInfoExtension.isValidInput(args[0]))
             {
@@ -47,7 +42,7 @@ namespace BongSecurity
                     return;
                 }
 
-                run();
+                backgroundWorker1.RunWorkerAsync();
             }
             else
             {
@@ -69,17 +64,7 @@ namespace BongSecurity
             sourceFolderDeleteAfterCopyToolTip.SetToolTip(sourceFolderDeleteAfterCopy, "원본파일 삭제");
         }
 
-        public void updateGoogleUploadProgressBar(long value, string text)
-        {
-            progressbar.BeginInvoke(new Action(() =>
-            {
-                ++m_completeCount;
-                progressbar.Value = m_completeCount * 100/ m_gdTotCount;
-                gdTarget.Text = "(" + m_completeCount + "/" + m_gdTotCount + ")";
-            }));
-        }
-
-        private void loadSavePath()
+        private void button2_Click(object sender, EventArgs e)
         {
             var folderDlg = new FolderBrowserDialog();
             folderDlg.ShowNewFolderButton = true;
@@ -89,17 +74,12 @@ namespace BongSecurity
                 return;
             }
             var path = new DirectoryInfo(folderDlg.SelectedPath);
-            if(!path.Exists)
+            if (!path.Exists)
             {
                 path.Create();
             }
             localFolderTextBox.Text = folderDlg.SelectedPath;
             AppConfiguration.SetAppConfig("LocalPath", folderDlg.SelectedPath);
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            loadSavePath();
         }
 
         private void sourceDeleteChanged(object sender, EventArgs e)
@@ -119,34 +99,60 @@ namespace BongSecurity
                String.IsNullOrEmpty(credentialTextBox.Text) ||
                !FileInfoExtension.isDirectory(localFolderTextBox.Text))
             {
-                startBackupBtn.Enabled = false;
+                startCancelBtn.Enabled = false;
             }
             else
             {
-                startBackupBtn.Enabled = true;
+                startCancelBtn.Enabled = true;
             }
         }
-        
 
-        private void run()
+
+        private void button1_Click(object sender, EventArgs e)
         {
+            backgroundWorker1.RunWorkerAsync();
+        }
+
+        private void credentialBtn_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = System.Environment.CurrentDirectory;
+                openFileDialog.Filter = "json files (*.json)|*.json";
+                openFileDialog.FilterIndex = 2;
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    credentialTextBox.Text = openFileDialog.FileName;
+                    AppConfiguration.SetAppConfig("CredentialPath", openFileDialog.FileName);
+                }
+            }
+        }
+
+        // This event handler is where the actual,
+        // potentially time-consuming work is done.
+        private void backgroundWorker1_DoWork(object sender,
+            DoWorkEventArgs e)
+        {
+            // Get the BackgroundWorker that raised this event.
+            BackgroundWorker worker = sender as BackgroundWorker;
+            
+            e.Result = Error.SUCCESS;
             var isSourceDelete = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
             var nameOnGoogleDrive = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
             var destPath = AppConfiguration.GetAppConfig("LocalPath");
             var credentialPath = AppConfiguration.GetAppConfig("CredentialPath");
 
             if (String.IsNullOrEmpty(destPath) ||
-                   String.IsNullOrEmpty(nameOnGoogleDrive) ||
-                   String.IsNullOrEmpty(credentialPath) ||
-                   !new FileInfo(credentialPath).Exists)
+                String.IsNullOrEmpty(nameOnGoogleDrive) ||
+                String.IsNullOrEmpty(credentialPath) ||
+                !new FileInfo(credentialPath).Exists)
             {
-                MessageBox.Show("프로그램 설정이 올바르지 않습니다.");
-                startBackupBtn.Enabled = false;
+                e.Result = Error.NOT_READY;
                 return;
             }
-
+            worker.ReportProgress(0, "Start security (0/3)");
             /// 파일 링크 주소
-            string dirName ;
+            string dirName;
             var info = new FileInfo(m_selectedFile);
             if (!FileInfoExtension.isDirectory(m_selectedFile))
             {
@@ -157,156 +163,119 @@ namespace BongSecurity
             {
                 dirName = new DirectoryInfo(m_selectedFile).Name;
             }
-            
+
             var target = destPath + "\\" + DateTime.Now.ToString("[yyyy_MM_dd_ss]_") + dirName;
             Program.AddLog("Start copy to " + target);
 
-            progressbar.Style = ProgressBarStyle.Marquee;
-            progressbar.MarqueeAnimationSpeed = 30;
-
             //Create a tast to run copy file
-            Task.Run(() =>
+
+            FileInfoExtension.CopyFolder(m_selectedFile, target);
+            worker.ReportProgress(30, "Start security (1/3)");
+
+            /// 인터넷 체크
+            Program.AddLog("Internet connection check.. ");
+            if (!GoogleDriveApi.CheckForInternetConnection())
             {
-                // To move an entire directory. To programmatically modify or combine
-                // path strings, use the System.IO.Path class.
+                Program.AddLog("Failed.");
+                e.Result = Error.FAILED_INTERNET_CONNECTION;
 
-                /// 파일이면 
-                /// 폴더 만들고
-                /// /// 해당 폴더에 일느 동일하게 복사하기
-                FileInfoExtension.CopyFolder(m_selectedFile, target);
+                return;
+            }
 
-                /// 인터넷 체크
-                Program.AddLog("Internet connection check.. ");
-                if (!CheckForInternetConnection())
+            /// root id 가져오기
+            var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
+            if (String.IsNullOrEmpty(id))
+            {
+                id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
+            }
+
+            Program.AddLog("Start google drive upload.. " + id);
+
+            //Google upload
+            if (FileInfoExtension.isDirectory(m_selectedFile))
+            {
+                // 압축
+                if (!FileInfoExtension.Compression(m_selectedFile, target + ".zip"))
                 {
-                    Program.AddLog("Failed.");
-                    System.Environment.Exit(0);
+                    e.Result = Error.FAILED_COMPRESSION;
                     return;
                 }
-
-                /// root id 가져오기
-                var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
-                if (String.IsNullOrEmpty(id))
-                {
-
-                    id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
-                }
-
-                Program.AddLog("Start google drive upload.. " + id);
-
-                //Google upload
-                if (FileInfoExtension.isDirectory(m_selectedFile))
-                {
-                    // 압축
-                    if (!FileInfoExtension.Compression(m_selectedFile, target + ".zip"))
-                    {
-                        return;
-                    }
-                }
-
-                Program.AddLog("Compression success.. ");
-
-                if (GoogleDriveApi.FileUploadInFolder(id, target + ".zip"))
-                {
-                    Program.AddLog("Upload success.");
-                    ///
-                    if (isSourceDelete)
-                    {
-                        FileInfoExtension.DeleteFolder(target + ".zip");
-                        FileInfoExtension.DeleteFolder(m_selectedFile);
-                    }
-
-
-                    /// 원본 삭제
-                    System.Environment.Exit(0);
-                }
-
-            }).GetAwaiter().OnCompleted(() => {
-                /// 인터넷 체크
-                Program.AddLog("Internet connection check.. ");
-                if (!CheckForInternetConnection())
-                {
-                    Program.AddLog("Failed.");
-                    System.Environment.Exit(0);
-                    return;
-                }
-
-                /// root id 가져오기
-                var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
-                if(String.IsNullOrEmpty(id))
-                {
-                    
-                    id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
-                }
-
-                Program.AddLog("Start google drive upload.. " + id);
-
-                //Google upload
-                if (FileInfoExtension.isDirectory(m_selectedFile))
-                {
-                    // 압축
-                    if (!FileInfoExtension.Compression(m_selectedFile, target + ".zip"))
-                    {
-                        return;
-                    }
-                }
-
-                Program.AddLog("Compression success.. ");
-
-                if (GoogleDriveApi.FileUploadInFolder(id, target + ".zip"))
-                {
-                    Program.AddLog("Upload success.");
-                    ///
-                    if(isSourceDelete)
-                    {
-                        FileInfoExtension.DeleteFolder(target + ".zip");
-                        FileInfoExtension.DeleteFolder(m_selectedFile);
-                    }
-
-                    
-                    /// 원본 삭제
-                    System.Environment.Exit(0);
-                }
-                
-                //MessageBox.Show("You have successfully copied the file !", "Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            });
-        }
-
-
-        public static bool CheckForInternetConnection()
-        {
-            try
-            {
-                using (var client = new WebClient())
-                using (client.OpenRead("http://google.com/generate_204"))
-                    return true;
             }
-            catch
+
+            worker.ReportProgress(80, "Start security (2/3)");
+            Program.AddLog("Compression success.. ");
+            if (GoogleDriveApi.FileUploadInFolder(id, target + ".zip"))
             {
-                return false;
+                worker.ReportProgress(100, "Start bong's security (3/3)");
+
+                Program.AddLog("Upload success.");
+                ///
+                if (isSourceDelete)
+                {
+                    FileInfoExtension.DeleteFolder(target + ".zip");
+                    FileInfoExtension.DeleteFolder(m_selectedFile);
+                }
+            }
+            else
+            {
+                e.Result = Error.FAILED_UPLOAD;
             }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        // This event handler deals with the results of the
+        // background operation.
+        private void backgroundWorker1_RunWorkerCompleted(
+            object sender, RunWorkerCompletedEventArgs e)
         {
-            run();
-        }
-
-        private void credentialBtn_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            // First, handle the case where an exception was thrown.
+            if (e.Error != null)
             {
-                openFileDialog.InitialDirectory = System.Environment.CurrentDirectory;
-                openFileDialog.Filter = "json files (*.json)|*.json";
-                openFileDialog.FilterIndex = 2;
-                //openFileDialog.RestoreDirectory = true;
-
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                MessageBox.Show(e.Error.Message);
+            }
+            else if (e.Cancelled)
+            {
+                statusLabel.Text = "Canceled";
+            }
+            else
+            {
+                var error = (Error)e.Result;
+                if (Error.SUCCESS == error)
                 {
-                    credentialTextBox.Text = openFileDialog.FileName;
-                    AppConfiguration.SetAppConfig("CredentialPath", openFileDialog.FileName);
+                    MessageBox.Show("Sucess");
+                    System.Environment.Exit(0);
                 }
+                else if (Error.NOT_READY == error)
+                {
+                    MessageBox.Show("NOT_READY");
+                }
+                else if (Error.FAILED_INTERNET_CONNECTION == error)
+                {
+                    MessageBox.Show("FAILED_INTERNET_CONNECTION");
+                }
+                else if (Error.FAILED_COMPRESSION == error)
+                {
+                    MessageBox.Show("FAILED_COMPRESSION");
+                }
+                else if (Error.FAILED_UPLOAD == error)
+                {
+                    MessageBox.Show("FAILED_UPLOAD");
+                }
+
+                startCancelBtn.Enabled = true;
             }
         }
+
+        // This event handler updates the progress bar.
+        private void backgroundWorker1_ProgressChanged(object sender,
+            ProgressChangedEventArgs e)
+        {
+            if(e.ProgressPercentage == 0)
+            {
+                progressbar.Style = ProgressBarStyle.Marquee;
+                progressbar.MarqueeAnimationSpeed = 30;
+            }
+            this.statusLabel.Text = e.UserState.ToString();
+        }
+
     }
 }
