@@ -19,6 +19,5 @@
 - [o] Local file copy/move
 - [o] Compress file  
 - [o] Progress with asynchrous  
-- [o] add rclick context
-
-
+- [o] add registry for context launch and icon
+- [0] link to google drive api enable
