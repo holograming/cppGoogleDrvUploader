@@ -1,5 +1,9 @@
 # BongSecurity
 
+### Preview
+![App image](./BongSecurity/res/defaultImage.png)
+
+![Context image](./BongSecurity/res/context_menu.png)
 
 아내님을 위한 첫번쨰 프로젝트
 
@@ -21,3 +25,4 @@
 - [o] Progress with asynchrous  
 - [o] add registry for context launch and icon
 - [0] link to google drive api enable
+
