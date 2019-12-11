@@ -49,7 +49,9 @@ namespace BongSecurity
             this.credentialTextBox = new System.Windows.Forms.TextBox();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.registryImg = new System.Windows.Forms.PictureBox();
+            this.goToEnableApiImg = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.registryImg)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.goToEnableApiImg)).BeginInit();
             this.SuspendLayout();
             // 
             // progressbar
@@ -175,11 +177,25 @@ namespace BongSecurity
             this.registryImg.TabStop = false;
             this.registryImg.Click += new System.EventHandler(this.pictureBox1_Click);
             // 
+            // goToEnableApiImg
+            // 
+            this.goToEnableApiImg.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.goToEnableApiImg.Enabled = false;
+            this.goToEnableApiImg.Image = global::BongSecurity.Properties.Resources._240px_Google_Drive_logo__1_;
+            this.goToEnableApiImg.Location = new System.Drawing.Point(64, 26);
+            this.goToEnableApiImg.Name = "goToEnableApiImg";
+            this.goToEnableApiImg.Size = new System.Drawing.Size(24, 24);
+            this.goToEnableApiImg.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.goToEnableApiImg.TabIndex = 18;
+            this.goToEnableApiImg.TabStop = false;
+            this.goToEnableApiImg.Click += new System.EventHandler(this.goToGoogleDriveApi_Click);
+            // 
             // MainFrame
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(336, 263);
+            this.Controls.Add(this.goToEnableApiImg);
             this.Controls.Add(this.registryImg);
             this.Controls.Add(this.credentialLabel);
             this.Controls.Add(this.credentialBtn);
@@ -195,9 +211,10 @@ namespace BongSecurity
             this.Controls.Add(this.progressbar);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainFrame";
-            this.Text = "Form1";
+            this.Text = "Bong\'s Security";
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.registryImg)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.goToEnableApiImg)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -240,6 +257,7 @@ namespace BongSecurity
         private System.Windows.Forms.Button credentialBtn;
         private System.Windows.Forms.TextBox credentialTextBox;
         private System.Windows.Forms.PictureBox registryImg;
+        private System.Windows.Forms.PictureBox goToEnableApiImg;
     }
 }
 

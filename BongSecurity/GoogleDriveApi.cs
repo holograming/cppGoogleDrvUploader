@@ -6,7 +6,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
-using System.Net;
+using System.Windows.Forms;
 
 /*
 Google drive API class
@@ -40,12 +40,14 @@ namespace BongSecurity
                 //String FolderPath = @"D:\";
                 //String FilePath = Path.Combine(FolderPath, "DriveServiceCredentials.json");
 
+                var authPath = Path.GetDirectoryName(Application.ExecutablePath) + "\\Authentication\\";
+
                 credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                     GoogleClientSecrets.Load(stream).Secrets,
                     Scopes,
                     "user",
                     CancellationToken.None,
-                    new FileDataStore("Authentication", true)).Result;
+                    new FileDataStore(authPath, true)).Result;
             }
 
             //Create Drive API service.

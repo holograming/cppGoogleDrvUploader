@@ -63,6 +63,16 @@ namespace BongSecurity.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap _240px_Google_Drive_logo__1_ {
+            get {
+                object obj = ResourceManager.GetObject("_240px_Google_Drive_logo__1_", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap regedit {
             get {
                 object obj = ResourceManager.GetObject("regedit", resourceCulture);

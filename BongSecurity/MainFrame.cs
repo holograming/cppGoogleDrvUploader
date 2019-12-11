@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using System.IO;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace BongSecurity
 {
@@ -31,10 +32,10 @@ namespace BongSecurity
             localFolderTextBox.Text = AppConfiguration.GetAppConfig("LocalPath");
             credentialTextBox.Text = AppConfiguration.GetAppConfig("CredentialPath");
 
+            connectEvent();
+            devMode();
             if (!Convert.ToBoolean(AppConfiguration.GetAppConfig("DevMode")))
             {
-                
-
                 if (String.IsNullOrEmpty(localFolderTextBox.Text) || 
                     String.IsNullOrEmpty(googleDriveTextBox.Text) ||
                     String.IsNullOrEmpty(credentialTextBox.Text) || 
@@ -42,9 +43,8 @@ namespace BongSecurity
                 {
                     return;
                 }
+                
                 uploadMode();
-                connectEvent();
-
                 backgroundWorker1.RunWorkerAsync();
             }
             else
@@ -52,14 +52,13 @@ namespace BongSecurity
                 Program.AddLog("==================================================");
                 Program.AddLog("==================   DevMode   ===================");
                 Program.AddLog("==================================================");
-                connectEvent();
-                devMode();
             }
         }
 
         private void devMode()
         {
             registryImg.Enabled = true;
+            goToEnableApiImg.Enabled = true;
             sourceFolderDeleteAfterCopy.Enabled = true;
             localFolderBtn.Enabled = true;
             credentialBtn.Enabled = true;
@@ -72,6 +71,7 @@ namespace BongSecurity
         private void uploadMode()
         {
             registryImg.Enabled = false;
+            goToEnableApiImg.Enabled = false;
             sourceFolderDeleteAfterCopy.Enabled = false;
             localFolderBtn.Enabled = false;
             credentialBtn.Enabled = false;
@@ -114,11 +114,11 @@ namespace BongSecurity
 
         private void readyToStartBackup(object sender, EventArgs e)
         {
-            if(sender == googleDriveTextBox)
+            if (sender == googleDriveTextBox)
             {
                 AppConfiguration.SetAppConfig("NameOnGoogleDrive", googleDriveTextBox.Text);
             }
-            if(String.IsNullOrEmpty(googleDriveTextBox.Text) || 
+            if (String.IsNullOrEmpty(googleDriveTextBox.Text) ||
                String.IsNullOrEmpty(localFolderTextBox.Text) ||
                String.IsNullOrEmpty(credentialTextBox.Text) ||
                !FileInfoExtension.isDirectory(localFolderTextBox.Text))
@@ -147,13 +147,24 @@ namespace BongSecurity
                 openFileDialog.FilterIndex = 2;
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
+                    
                     var authPath = Path.GetDirectoryName(Application.ExecutablePath) + "\\Authentication";
-                    if(!System.IO.Directory.Exists(authPath))
+                    var toCopy = authPath + "\\" + Path.GetFileName(openFileDialog.FileName);
+                    if (openFileDialog.FileName.Equals(toCopy))
+                    {
+                        MessageBox.Show("파일이름이 동일합니다.");
+                        return;
+                    }
+                    if (!System.IO.Directory.Exists(authPath))
                     {
                         System.IO.Directory.CreateDirectory(authPath);
                     }
-
-                    File.Copy(openFileDialog.FileName, authPath + "\\" + Path.GetFileName(openFileDialog.FileName));
+                    
+                    if (File.Exists(toCopy))
+                    {
+                        File.Delete(toCopy);
+                    }
+                    File.Copy(openFileDialog.FileName, toCopy);
                     credentialTextBox.Text = authPath + "\\" + Path.GetFileName(openFileDialog.FileName);
                     AppConfiguration.SetAppConfig("CredentialPath", authPath + "\\" + Path.GetFileName(openFileDialog.FileName));
                 }
@@ -323,6 +334,13 @@ namespace BongSecurity
                 }
             }
             RegistryInfo.addLinkRegistry();
+        }
+
+        private void goToGoogleDriveApi_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("테스트입니다.");
+            ProcessStartInfo sInfo = new ProcessStartInfo("https://developers.google.com/drive/api/v3/quickstart/js");
+            Process.Start(sInfo);
         }
     }
 }
