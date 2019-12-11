@@ -73,6 +73,16 @@ namespace BongSecurity.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Log_file {
+            get {
+                object obj = ResourceManager.GetObject("Log_file", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap regedit {
             get {
                 object obj = ResourceManager.GetObject("regedit", resourceCulture);

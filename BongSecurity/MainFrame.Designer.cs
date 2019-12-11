@@ -48,10 +48,10 @@ namespace BongSecurity
             this.credentialBtn = new System.Windows.Forms.Button();
             this.credentialTextBox = new System.Windows.Forms.TextBox();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
-            this.registryImg = new System.Windows.Forms.PictureBox();
             this.goToEnableApiImg = new System.Windows.Forms.PictureBox();
-            ((System.ComponentModel.ISupportInitialize)(this.registryImg)).BeginInit();
+            this.registryImg = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.goToEnableApiImg)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.registryImg)).BeginInit();
             this.SuspendLayout();
             // 
             // progressbar
@@ -166,6 +166,18 @@ namespace BongSecurity
             this.backgroundWorker1.WorkerReportsProgress = true;
             this.backgroundWorker1.WorkerSupportsCancellation = true;
             // 
+            // goToEnableApiImg
+            // 
+            this.goToEnableApiImg.Enabled = false;
+            this.goToEnableApiImg.Image = global::BongSecurity.Properties.Resources._240px_Google_Drive_logo__1_;
+            this.goToEnableApiImg.Location = new System.Drawing.Point(63, 26);
+            this.goToEnableApiImg.Name = "goToEnableApiImg";
+            this.goToEnableApiImg.Size = new System.Drawing.Size(24, 24);
+            this.goToEnableApiImg.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.goToEnableApiImg.TabIndex = 18;
+            this.goToEnableApiImg.TabStop = false;
+            this.goToEnableApiImg.Click += new System.EventHandler(this.goToGoogleDriveApi_Click);
+            // 
             // registryImg
             // 
             this.registryImg.Enabled = false;
@@ -177,24 +189,13 @@ namespace BongSecurity
             this.registryImg.TabStop = false;
             this.registryImg.Click += new System.EventHandler(this.pictureBox1_Click);
             // 
-            // goToEnableApiImg
-            // 
-            this.goToEnableApiImg.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.goToEnableApiImg.Enabled = false;
-            this.goToEnableApiImg.Image = global::BongSecurity.Properties.Resources._240px_Google_Drive_logo__1_;
-            this.goToEnableApiImg.Location = new System.Drawing.Point(64, 26);
-            this.goToEnableApiImg.Name = "goToEnableApiImg";
-            this.goToEnableApiImg.Size = new System.Drawing.Size(24, 24);
-            this.goToEnableApiImg.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            this.goToEnableApiImg.TabIndex = 18;
-            this.goToEnableApiImg.TabStop = false;
-            this.goToEnableApiImg.Click += new System.EventHandler(this.goToGoogleDriveApi_Click);
-            // 
             // MainFrame
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(336, 263);
+            this.AutoSize = true;
+            this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.ClientSize = new System.Drawing.Size(334, 255);
             this.Controls.Add(this.goToEnableApiImg);
             this.Controls.Add(this.registryImg);
             this.Controls.Add(this.credentialLabel);
@@ -213,8 +214,8 @@ namespace BongSecurity
             this.Name = "MainFrame";
             this.Text = "Bong\'s Security";
             this.Load += new System.EventHandler(this.Form1_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.registryImg)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.goToEnableApiImg)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.registryImg)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 

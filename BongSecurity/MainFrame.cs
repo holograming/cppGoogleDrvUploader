@@ -338,7 +338,6 @@ namespace BongSecurity
 
         private void goToGoogleDriveApi_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("테스트입니다.");
             ProcessStartInfo sInfo = new ProcessStartInfo("https://developers.google.com/drive/api/v3/quickstart/js");
             Process.Start(sInfo);
         }

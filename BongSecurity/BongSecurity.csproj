@@ -145,6 +145,7 @@
     <None Include="Resources\loadImage.gif" />
     <None Include="res\regedit.png" />
     <None Include="res\240px-Google_Drive_logo %281%29.png" />
+    <None Include="res\Log file.png" />
     <Content Include="suchProps.ico" />
   </ItemGroup>
   <ItemGroup>
