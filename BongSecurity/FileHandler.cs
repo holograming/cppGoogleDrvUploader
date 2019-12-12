@@ -50,6 +50,7 @@ namespace BongSecurity
                 {
                     string name = Path.GetFileName(file);
                     string dest = Path.Combine(destFolder, name);
+                    dest = FileInfoExtension.getFilepathCheckExist(name);
                     File.Copy(file, dest);
                 }
                 string[] folders = Directory.GetDirectories(sourceFolder);
@@ -59,10 +60,6 @@ namespace BongSecurity
                     string dest = Path.Combine(destFolder, name);
                     CopyFolder(folder, dest);
                 }
-            }
-            else
-            {
-                File.Copy(sourceFolder, destFolder);
             }
         }
 
@@ -120,6 +117,22 @@ namespace BongSecurity
                 return true;
 
             return false;
+        }
+
+        public static string getFilepathCheckExist(string name)
+        {
+            int count = 1;
+            string fileNameOnly = Path.GetFileNameWithoutExtension(name);
+            string extension = Path.GetExtension(name);
+            string path = Path.GetDirectoryName(name);
+            string newFullPath = name;
+
+            while (File.Exists(newFullPath))
+            {
+                string tempFileName = string.Format("{0}({1})", fileNameOnly, count++);
+                newFullPath = Path.Combine(path, tempFileName + extension);
+            }
+            return newFullPath;
         }
     }
 
