@@ -29,7 +29,7 @@ namespace BongSecurity
             return false;
         }
 
-        public static void addLinkRegistry()
+        public static string addLinkRegistry()
         {
             if (!findLinkRegistry())
             {
@@ -57,11 +57,13 @@ namespace BongSecurity
                 {
                     //react appropriately
                     Program.AddLog("Error : " + ex.Message.ToString());
+                    return ex.Message.ToString();
                 }
             }
+            return "";
         }
 
-        public static void deleteLinkRegistry()
+        public static string deleteLinkRegistry()
         {
             if (findLinkRegistry())
             {
@@ -74,8 +76,10 @@ namespace BongSecurity
                 {
                     //react appropriately
                     Program.AddLog("Error : " + ex.Message.ToString());
+                    return ex.Message.ToString();
                 }
             }
+            return "";
         }
     }
 }

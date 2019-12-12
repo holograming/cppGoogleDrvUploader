@@ -283,14 +283,23 @@ namespace BongSecurity
                 result = showMessageBox("Registry를 지우시겠습니까?", "Registry delete", buttons);
                 if (result == System.Windows.Forms.DialogResult.Yes)
                 {
-                    RegistryInfo.deleteLinkRegistry();
+                    var ret = RegistryInfo.deleteLinkRegistry();
+                    if(!String.IsNullOrEmpty(ret))
+                    {
+                        showMessageBox(ret);
+                        return;
+                    }
                 }
                 else
                 {
                     return;
                 }
             }
-            RegistryInfo.addLinkRegistry();
+            var msg = RegistryInfo.addLinkRegistry();
+            if (!String.IsNullOrEmpty(msg))
+            {
+                showMessageBox(msg);
+            }
         }
 
         private void goToGoogleDriveApi_Click(object sender, EventArgs e)
