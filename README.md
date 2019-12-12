@@ -1,7 +1,14 @@
 # BongSecurity
 
+### Preview
+![App image](./BongSecurity/res/defaultImage.png)
 
-아내님을 위한 첫번쨰 프로젝트
+![Context image](./BongSecurity/res/context_menu.png)
+
+
+
+
+### 아내님을 위한 첫번쨰 프로젝트
 
 1. 원클릭으로 파일을 해당 폴더 또는 파일을 백업할 수 있는 기능을 만든다.
 
@@ -19,6 +26,6 @@
 - [o] Local file copy/move
 - [o] Compress file  
 - [o] Progress with asynchrous  
-- [o] add rclick context
-
+- [o] add registry for context launch and icon
+- [0] link to google drive api enable
 
