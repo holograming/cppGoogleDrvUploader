@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using System.IO;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 
@@ -8,7 +9,7 @@ namespace BongSecurity
 {
     public partial class MainFrame : Form
     {
-        private string m_selectedFile = "";
+        private List<string> m_selectedFile;
 
         enum Error { SUCCESS, NOT_READY, FAILED_INTERNET_CONNECTION, FAILED_COMPRESSION, FAILED_UPLOAD  };
 
@@ -17,15 +18,13 @@ namespace BongSecurity
             InitializeComponent();
             InitializeBackgroundWorker();
 
-            if (args.Length == 0 || String.IsNullOrEmpty(args[0]) || !FileInfoExtension.isValidInput(args[0]))
+            if (!Convert.ToBoolean(AppConfiguration.GetAppConfig("DevMode")) && args.Length == 0)
             {
-                MessageBox.Show("선택한 파일이 없으므로 프로그램을 종료합니다.");
+                showMessageBox("선택한 파일이 없으므로 프로그램을 종료합니다.");
                 Program.AddLog("파일 또는 폴더 입력이 없습니다.");
                 System.Environment.Exit(0);
                 return;
             }
-
-            m_selectedFile = args[0];
 
             sourceFolderDeleteAfterCopy.Checked = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
             googleDriveTextBox.Text = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
@@ -36,6 +35,8 @@ namespace BongSecurity
             devMode();
             if (!Convert.ToBoolean(AppConfiguration.GetAppConfig("DevMode")))
             {
+                m_selectedFile = new List<string>(args);
+
                 if (String.IsNullOrEmpty(localFolderTextBox.Text) || 
                     String.IsNullOrEmpty(googleDriveTextBox.Text) ||
                     String.IsNullOrEmpty(credentialTextBox.Text) || 
@@ -53,6 +54,16 @@ namespace BongSecurity
                 Program.AddLog("==================   DevMode   ===================");
                 Program.AddLog("==================================================");
             }
+        }
+
+        private void showMessageBox(string msg)
+        {
+            MessageBoxEx.Show(this, msg);
+        }
+
+        private DialogResult showMessageBox(string msg, string caption, MessageBoxButtons btn)
+        {
+            return MessageBoxEx.Show(this, msg, caption, btn);
         }
 
         private void devMode()
@@ -152,7 +163,7 @@ namespace BongSecurity
                     var toCopy = authPath + "\\" + Path.GetFileName(openFileDialog.FileName);
                     if (openFileDialog.FileName.Equals(toCopy))
                     {
-                        MessageBox.Show("파일이름이 동일합니다.");
+                        showMessageBox("파일이름이 동일합니다.");
                         return;
                     }
                     if (!System.IO.Directory.Exists(authPath))
@@ -195,74 +206,20 @@ namespace BongSecurity
             }
             worker.ReportProgress(0, "Start security (0/3)");
             /// 파일 링크 주소
-            string dirName;
-            var info = new FileInfo(m_selectedFile);
-            if (!FileInfoExtension.isDirectory(m_selectedFile))
+            foreach (string input in m_selectedFile)
             {
-                dirName = Path.GetFileNameWithoutExtension(m_selectedFile);
-                Program.AddLog("Input file source : " + dirName);
-            }
-            else
-            {
-                dirName = new DirectoryInfo(m_selectedFile).Name;
-            }
-
-            var target = destPath + "\\" + DateTime.Now.ToString("[yyyy_MM_dd_ss]_") + dirName;
-            Program.AddLog("Start copy to " + target);
-
-            //Create a tast to run copy file
-
-            FileInfoExtension.CopyFolder(m_selectedFile, target);
-            worker.ReportProgress(30, "Start security (1/3)");
-
-            /// 인터넷 체크
-            Program.AddLog("Internet connection check.. ");
-            if (!GoogleDriveApi.CheckForInternetConnection())
-            {
-                Program.AddLog("Failed.");
-                e.Result = Error.FAILED_INTERNET_CONNECTION;
-
-                return;
-            }
-
-            /// root id 가져오기
-            var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
-            if (String.IsNullOrEmpty(id))
-            {
-                id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
-            }
-
-            Program.AddLog("Start google drive upload.. " + id);
-
-            //Google upload
-            if (FileInfoExtension.isDirectory(m_selectedFile))
-            {
-                // 압축
-                if (!FileInfoExtension.Compression(m_selectedFile, target + ".zip"))
+                var info = new FileInfo(input);
+                Program.AddLog("Input file source : " + input);
+                if (!FileInfoExtension.isDirectory(input))
                 {
-                    e.Result = Error.FAILED_COMPRESSION;
-                    return;
+                    runFileMode(worker, input);
+                }
+                else
+                {
+                    runDirectoryMode(worker, input);
                 }
             }
-
-            worker.ReportProgress(80, "Start security (2/3)");
-            Program.AddLog("Compression success.. ");
-            if (GoogleDriveApi.FileUploadInFolder(id, target + ".zip"))
-            {
-                worker.ReportProgress(100, "Start bong's security (3/3)");
-
-                Program.AddLog("Upload success.");
-                ///
-                if (isSourceDelete)
-                {
-                    FileInfoExtension.DeleteFolder(target + ".zip");
-                    FileInfoExtension.DeleteFolder(m_selectedFile);
-                }
-            }
-            else
-            {
-                e.Result = Error.FAILED_UPLOAD;
-            }
+            worker.ReportProgress(100, "Start bong's security (3/3)");
         }
 
         // This event handler deals with the results of the
@@ -273,7 +230,7 @@ namespace BongSecurity
             // First, handle the case where an exception was thrown.
             if (e.Error != null)
             {
-                MessageBox.Show(e.Error.Message);
+                showMessageBox(e.Error.Message);
             }
             else if (e.Cancelled)
             {
@@ -284,24 +241,24 @@ namespace BongSecurity
                 var error = (Error)e.Result;
                 if (Error.SUCCESS == error)
                 {
-                    MessageBox.Show("Sucess");
+                    showMessageBox("Sucess");
                     System.Environment.Exit(0);
                 }
                 else if (Error.NOT_READY == error)
                 {
-                    MessageBox.Show("NOT_READY");
+                    showMessageBox("NOT_READY");
                 }
                 else if (Error.FAILED_INTERNET_CONNECTION == error)
                 {
-                    MessageBox.Show("FAILED_INTERNET_CONNECTION");
+                    showMessageBox("FAILED_INTERNET_CONNECTION");
                 }
                 else if (Error.FAILED_COMPRESSION == error)
                 {
-                    MessageBox.Show("FAILED_COMPRESSION");
+                    showMessageBox("FAILED_COMPRESSION");
                 }
                 else if (Error.FAILED_UPLOAD == error)
                 {
-                    MessageBox.Show("FAILED_UPLOAD");
+                    showMessageBox("FAILED_UPLOAD");
                 }
                 devMode();
                 startCancelBtn.Enabled = true;
@@ -323,7 +280,7 @@ namespace BongSecurity
                 DialogResult result;
 
                 // Displays the MessageBox.
-                result = MessageBox.Show("Registry를 지우시겠습니까?", "Registry delete", buttons);
+                result = showMessageBox("Registry를 지우시겠습니까?", "Registry delete", buttons);
                 if (result == System.Windows.Forms.DialogResult.Yes)
                 {
                     RegistryInfo.deleteLinkRegistry();
@@ -340,6 +297,126 @@ namespace BongSecurity
         {
             ProcessStartInfo sInfo = new ProcessStartInfo("https://developers.google.com/drive/api/v3/quickstart/js");
             Process.Start(sInfo);
+        }
+
+        private Error runFileMode(BackgroundWorker worker, string name)
+        {
+            var isSourceDelete = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
+            var nameOnGoogleDrive = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
+            var destPath = AppConfiguration.GetAppConfig("LocalPath");
+            var credentialPath = AppConfiguration.GetAppConfig("CredentialPath");
+
+            var target = destPath + "\\" + Path.GetFileName(name);
+            Program.AddLog("Start copy to " + target);
+
+            //Create a tast to run copy file
+            target = FileInfoExtension.getFilepathCheckExist(target);
+
+            File.Copy(name, target);
+            worker.ReportProgress(30, "Start security " + name);
+
+            /// 인터넷 체크
+            Program.AddLog("Internet connection check.. ");
+            if (!GoogleDriveApi.CheckForInternetConnection())
+            {
+                Program.AddLog("Failed.");
+                return Error.FAILED_INTERNET_CONNECTION;
+            }
+
+            /// root id 가져오기
+            var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
+            if (String.IsNullOrEmpty(id))
+            {
+                id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
+            }
+
+            Program.AddLog("Start google drive upload.. " + id);
+
+            //Google upload
+            worker.ReportProgress(80, "Start security " + target);
+            Program.AddLog("Compression success.. ");
+            if (GoogleDriveApi.FileUploadInFolder(id, target))
+            {
+                Program.AddLog("Upload success.");
+                if (isSourceDelete)
+                {
+                    FileInfoExtension.DeleteFolder(name);
+                }
+            }
+            else
+            {
+                return Error.FAILED_UPLOAD;
+            }
+
+            return Error.SUCCESS;
+        }
+
+        private Error runDirectoryMode(BackgroundWorker worker, string name)
+        {
+            var isSourceDelete = Convert.ToBoolean(AppConfiguration.GetAppConfig("SourceDelete"));
+            var nameOnGoogleDrive = AppConfiguration.GetAppConfig("NameOnGoogleDrive");
+            var destPath = AppConfiguration.GetAppConfig("LocalPath");
+            var credentialPath = AppConfiguration.GetAppConfig("CredentialPath");
+
+            var nameOnly = new DirectoryInfo(name).Name;
+            var target = destPath + "\\" + nameOnly;
+            Program.AddLog("Start copy to " + target);
+
+            //Create a tast to run copy file
+            FileInfoExtension.CopyFolder(name, target);
+            worker.ReportProgress(30, "Start security " + name);
+
+            /// 인터넷 체크
+            Program.AddLog("Internet connection check.. ");
+            if (!GoogleDriveApi.CheckForInternetConnection())
+            {
+                Program.AddLog("Failed.");
+                return Error.FAILED_INTERNET_CONNECTION;
+            }
+
+            /// root id 가져오기
+            var id = GoogleDriveApi.getBackupFolderId(nameOnGoogleDrive);
+            if (String.IsNullOrEmpty(id))
+            {
+                id = GoogleDriveApi.CreateFolder(nameOnGoogleDrive);
+            }
+
+            Program.AddLog("Start google drive upload.. " + id);
+
+            //Google upload
+            target = target +".zip";
+            if (System.IO.File.Exists(target))
+            {
+                target = FileInfoExtension.getFilepathCheckExist(target);
+            }
+
+            if (FileInfoExtension.isDirectory(name))
+            {
+                // 압축
+                if (!FileInfoExtension.Compression(name, target))
+                {
+                    return Error.FAILED_COMPRESSION;
+                }
+            }
+
+            worker.ReportProgress(80, "Start security " + target);
+            Program.AddLog("Compression success.. ");
+            if (GoogleDriveApi.FileUploadInFolder(id, target))
+            {
+                Program.AddLog("Upload success.");
+                ///
+                File.Delete(target);
+                if (isSourceDelete)
+                {
+                    FileInfoExtension.DeleteFolder(name);
+                }
+            }
+            else
+            {
+                return Error.FAILED_UPLOAD;
+            }
+
+            return Error.SUCCESS;
         }
     }
 }

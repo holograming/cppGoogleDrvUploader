@@ -108,6 +108,7 @@
       <DependentUpon>MainFrame.cs</DependentUpon>
     </Compile>
     <Compile Include="GoogleDriveApi.cs" />
+    <Compile Include="MessageBoxEx.cs" />
     <Compile Include="MimeType.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
